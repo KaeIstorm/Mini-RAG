@@ -35,7 +35,7 @@ export default function HomePage() {
     const startTime = performance.now();
     try {
       // NOTE: Replace with your actual FastAPI endpoint for ingestion.
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/query`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text_content: inputText }),
