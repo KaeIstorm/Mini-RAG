@@ -9,3 +9,7 @@ node_modules/
 
 Python virtual environment
 venv/ pycache/
+
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 // These icons were causing a compilation error.
 // They have been replaced with text-based alternatives.
 const IngestIcon = () => <span>[UPLOAD]</span>;
@@ -35,7 +36,7 @@ export default function HomePage() {
     const startTime = performance.now();
     try {
       // NOTE: Replace with your actual FastAPI endpoint for ingestion.
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ingest`, {
+      const response = await fetch(`${API_URL}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text_content: inputText }),
@@ -83,7 +84,7 @@ export default function HomePage() {
     const startTime = performance.now();
     try {
       // NOTE: Replace with your actual FastAPI endpoint for querying.
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/query`, {
+      const response = await fetch(`${API_URL}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: query }),
