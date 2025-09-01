@@ -80,7 +80,7 @@ async def ingest_document(request: IngestRequest):
 
         # 3. Prepare for upsert with unique IDs
         docs_with_ids = [doc for doc in new_chunks]
-        for doc in new_chunks:
+        for doc in docs_with_ids:
             doc_id = getDocID(doc)
             doc.metadata["document_id"] = doc_id
 
@@ -90,7 +90,7 @@ async def ingest_document(request: IngestRequest):
             index_name=Config.PINECONE_INDEX_NAME,
             embedding=embeddings
         )
-        vector_store.add_documents(documents=new_chunks)
+        vector_store.add_documents(documents=docs_with_ids, ids=[doc.metadata["document_id"] for doc in docs_with_ids])
 
         print("Received new text for ingestion. Upsert process completed successfully.")
         return {"message": "Document ingestion successful."}
