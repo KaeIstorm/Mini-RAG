@@ -1,12 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any
+import tiktoken
 
 # Import your RAG and Indexing functions from their respective files
 from api.rag import getRetriever, ragChain
-from api.indexing import ingest_text_and_upsert
+from api.indexing import loadAndChunk, vectorUpsert
 from api.config import Config
+
+# Import helpers from your helpers.py file
+from api.utilities import getDocID, tokenCount
 
 # --- Initialize the FastAPI app ---
 app = FastAPI(
@@ -15,28 +18,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# --- CORS Middleware ---
-# This allows your Next.js frontend to communicate with the FastAPI backend.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins, but you should restrict this in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Global variables to hold the RAG components
-# These will be initialized once when the application starts
-rag_chain = None
 retriever = None
+rag_chain = None
 
 # --- Startup Event ---
 # This runs once when the API starts. It's crucial for performance.
 @app.on_event("startup")
 async def startup_event():
-    global rag_chain, retriever
+    global retriever, rag_chain
     try:
-        # NOTE: This part assumes you have already run 'indexing.py' at least once
+        # NOTE: This part assumes you have already run 'indexing.py' once
         # to populate your Pinecone index.
         # This startup event only initializes the query-time components.
         
@@ -50,9 +42,8 @@ async def startup_event():
 
     except Exception as e:
         print(f"Failed to initialize RAG pipeline: {e}")
-        # In a production environment, you might log this error
-        # and raise a critical exception to prevent the app from starting.
         raise HTTPException(status_code=500, detail=f"Server startup failed: {e}")
+
 
 # --- API Endpoints ---
 
@@ -67,10 +58,41 @@ async def ingest_document(request: IngestRequest):
     This is for real-time updates from the frontend.
     """
     try:
-        print("Received new text for ingestion. Starting upsert process...")
-        # Call the reusable function from indexing.py
-        ingest_text_and_upsert(request.text_content)
-        print("Upsert process completed successfully.")
+        # We need to re-import the necessary libraries as they are not global to this file
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+        from langchain_core.documents import Document
+        from langchain_pinecone import PineconeVectorStore
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+        # Placeholder for the chunking and upsert logic for new content
+        # 1. Create a temporary document from the incoming text
+        temp_doc = [Document(page_content=request.text_content, metadata={"source": "user_input"})]
+
+        # 2. Chunk the new content using your helpers
+        tokenizer = tiktoken.get_encoding("cl100k_base")
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=200, 
+            length_function=tokenCount,
+            separators=["\n\n", "\n", " ", ""]
+        )
+        new_chunks = splitter.split_documents(temp_doc)
+
+        # 3. Prepare for upsert with unique IDs
+        docs_with_ids = [doc for doc in new_chunks]
+        for doc in docs_with_ids:
+            doc_id = getDocID(doc)
+            doc.metadata["document_id"] = doc_id
+
+        # 4. Upsert into the vector store
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        vector_store = PineconeVectorStore.from_existing_index(
+            index_name=Config.PINECONE_INDEX_NAME,
+            embedding=embeddings
+        )
+        vector_store.add_documents(documents=docs_with_ids, ids=[doc.metadata["document_id"] for doc in docs_with_ids])
+
+        print("Received new text for ingestion. Upsert process completed successfully.")
         return {"message": "Document ingestion successful."}
     except Exception as e:
         print(f"Ingestion failed: {e}")
@@ -92,12 +114,23 @@ async def run_query(request: QueryRequest):
     try:
         # Invoke the pre-initialized RAG chain with the user's question
         response = rag_chain.invoke(request.question)
-        return {"answer": response, "sources": []} # Return sources in the response
+        return {"answer": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred during query processing: {e}")
+
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     """Checks if the API is running."""
     return {"status": "ok"}
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can restrict later to your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
