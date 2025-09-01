@@ -35,7 +35,7 @@ export default function HomePage() {
     const startTime = performance.now();
     try {
       // NOTE: Replace with your actual FastAPI endpoint for ingestion.
-      const response = await fetch("https://mini-rag-curp.onrender.com/ingest", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text_content: inputText }),
@@ -83,7 +83,7 @@ export default function HomePage() {
     const startTime = performance.now();
     try {
       // NOTE: Replace with your actual FastAPI endpoint for querying.
-      const response = await fetch("https://mini-rag-curp.onrender.com/query", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: query }),
