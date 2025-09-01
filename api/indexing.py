@@ -2,7 +2,7 @@
 import os
 from pinecone import Pinecone
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain.document_loaders import TextLoader
+from langchain.document_loaders import TextLoader, PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 #import modules
@@ -12,7 +12,15 @@ from api.utilities import getDocID, tokenCount
 #loading and chunking the document
 def loadAndChunk(path:str):
     """Loads the provided text and chunks it."""
-    
+    ext = os.path.splitext(path)[1].lower()
+
+    # document loading
+    if ext == ".txt":
+        loader = TextLoader(path)
+    elif ext == ".pdf":
+        loader = PyPDFLoader(path)
+    else:
+        raise ValueError(f"Unsupported file type: {ext}. Supported: .txt, .pdf")
     #document loading
     loader=TextLoader(path)
     documents=loader.load()
