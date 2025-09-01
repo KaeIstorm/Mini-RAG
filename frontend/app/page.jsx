@@ -24,51 +24,70 @@ export default function HomePage() {
   const [loadingIngest, setLoadingIngest] = useState(false);
 
   // Function to handle the document ingestion
-  const handleIngest = async () => {
-    if (!inputText) return;
+const handleIngest = async () => {
+  if (!inputText) return;
 
-    setLoadingIngest(true);
-    setAnswer(null); // Clear previous results
-    setSources(null);
-    setResponseTime(null);
-    setTokenEstimate(null);
+  setLoadingIngest(true);
+  setAnswer(null);
+  setSources(null);
+  setResponseTime(null);
+  setTokenEstimate(null);
 
-    const startTime = performance.now();
-    try {
-      // NOTE: Replace with your actual FastAPI endpoint for ingestion.
-      const response = await fetch(`${API_URL}/ingest`, {
+  const startTime = performance.now();
+  try {
+    let response;
+    if (inputText instanceof File) {
+      // For PDFs
+      const formData = new FormData();
+      formData.append("file", inputText);
+
+      response = await fetch(`${API_URL}/ingest`, {
+        method: "POST",
+        body: formData,
+      });
+    } else {
+      // For TXT
+      response = await fetch(`${API_URL}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text_content: inputText }),
       });
-
-      if (!response.ok) {
-        throw new Error("Ingestion failed. Please check the backend.");
-      }
-
-      const data = await response.json();
-      const endTime = performance.now();
-      setResponseTime((endTime - startTime).toFixed(2));
-      alert(data.message || "Document ingested successfully!");
-    } catch (error) {
-      console.error(error);
-      alert("An error occurred during ingestion. Please try again.");
-    } finally {
-      setLoadingIngest(false);
     }
-  };
+
+    if (!response.ok) {
+      throw new Error("Ingestion failed. Please check the backend.");
+    }
+
+    const data = await response.json();
+    const endTime = performance.now();
+    setResponseTime((endTime - startTime).toFixed(2));
+    alert(data.message || "Document ingested successfully!");
+  } catch (error) {
+    console.error(error);
+    alert("An error occurred during ingestion. Please try again.");
+  } finally {
+    setLoadingIngest(false);
+  }
+};
 
   // Function to handle file upload
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    if (file.type === "text/plain") {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setInputText(e.target.result);
+        setInputText(e.target.result); // For TXT files
       };
       reader.readAsText(file);
+    } else if (file.type === "application/pdf") {
+      // Just save the file in state and send it directly in handleIngest
+      setInputText(file);
+    } else {
+      alert("Unsupported file format. Please upload a .txt or .pdf file.");
     }
-  };
+  }
+};
 
   // Function to handle the user's query
   const handleQuery = async (e) => {
@@ -157,7 +176,7 @@ export default function HomePage() {
               <input
                 id="file-upload"
                 type="file"
-                accept=".txt"
+                accept=".txt,.pdf"
                 onChange={handleFileUpload}
                 className="hidden"
               />
