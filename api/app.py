@@ -7,12 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.documents import Document
 
 # Import your RAG and Indexing functions from their respective files
-from api.rag import getRetriever, ragChain
-from api.indexing import loadAndChunk, vectorUpsert
-from api.config import Config
+from rag import getRetriever, ragChain
+from indexing import loadAndChunk, vectorUpsert
+from config import Config
 
 # Import helpers from your helpers.py file
-from api.utilities import getDocID, tokenCount
+from utilities import getDocID, tokenCount
 
 # --- Initialize the FastAPI app ---
 app = FastAPI(

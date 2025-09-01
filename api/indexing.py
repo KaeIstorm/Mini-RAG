@@ -6,8 +6,8 @@ from langchain.document_loaders import TextLoader, PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 #import modules
-from api.config import Config
-from api.utilities import getDocID, tokenCount
+from config import Config
+from utilities import getDocID, tokenCount
 
 #loading and chunking the document
 def loadAndChunk(path:str):

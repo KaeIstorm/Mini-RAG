@@ -7,8 +7,8 @@ from langchain_core.runnables import RunnablePassthrough, RunnableLambda, Runnab
 from langchain_core.output_parsers import StrOutputParser
 from langchain_pinecone import PineconeVectorStore
 
-from api.config import Config
-from api.utilities import formatDocsWithIDs
+from config import Config
+from utilities import formatDocsWithIDs
 
 def getRetriever():
     """Creates a Retriever composed of MMR Retrieval and Cohere Reranking"""
