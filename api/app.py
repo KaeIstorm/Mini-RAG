@@ -1,7 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel
 from typing import Dict, Any
 import tiktoken
+import os
+from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.documents import Document
 
 # Import your RAG and Indexing functions from their respective files
 from api.rag import getRetriever, ragChain
@@ -28,10 +31,10 @@ rag_chain = None
 async def startup_event():
     global retriever, rag_chain
     try:
-        # NOTE: This part assumes you have already run 'indexing.py' once
+     # NOTE: This part assumes you have already run 'indexing.py' once
         # to populate your Pinecone index.
         # This startup event only initializes the query-time components.
-        
+
         # 1. Initialize the retriever (connects to your populated Pinecone index)
         retriever = getRetriever()
         
@@ -44,58 +47,28 @@ async def startup_event():
         print(f"Failed to initialize RAG pipeline: {e}")
         raise HTTPException(status_code=500, detail=f"Server startup failed: {e}")
 
-
 # --- API Endpoints ---
 
-# Pydantic model for the ingestion request
-class IngestRequest(BaseModel):
-    text_content: str
-
 @app.post("/ingest")
-async def ingest_document(request: IngestRequest):
+async def ingest_document(file: UploadFile = File(...)):
     """
-    Ingests new text content, chunks it, and upserts it to the vector store.
-    This is for real-time updates from the frontend.
+    Ingests a new document file (e.g., PDF, TXT), chunks it, and upserts to the vector store.
     """
     try:
-        # We need to re-import the necessary libraries as they are not global to this file
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-        from langchain_core.documents import Document
-        from langchain_pinecone import PineconeVectorStore
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        # Save the uploaded file temporarily
+        file_path = f"/tmp/{file.filename}"
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
 
-        # Placeholder for the chunking and upsert logic for new content
-        # 1. Create a temporary document from the incoming text
-        temp_doc = [Document(page_content=request.text_content, metadata={"source": "user_input"})]
+        # Now call your updated load and chunk function
+        chunks = loadAndChunk(file_path)
+        vectorUpsert(chunks)
 
-        # 2. Chunk the new content using your helpers
-        tokenizer = tiktoken.get_encoding("cl100k_base")
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, 
-            chunk_overlap=200, 
-            length_function=tokenCount,
-            separators=["\n\n", "\n", " ", ""]
-        )
-        new_chunks = splitter.split_documents(temp_doc)
+        # Remove the temporary file
+        os.remove(file_path)
 
-        # 3. Prepare for upsert with unique IDs
-        docs_with_ids = [doc for doc in new_chunks]
-        for doc in docs_with_ids:
-            doc_id = getDocID(doc)
-            doc.metadata["document_id"] = doc_id
-
-        # 4. Upsert into the vector store
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        vector_store = PineconeVectorStore.from_existing_index(
-            index_name=Config.PINECONE_INDEX_NAME,
-            embedding=embeddings
-        )
-        vector_store.add_documents(documents=docs_with_ids, ids=[doc.metadata["document_id"] for doc in docs_with_ids])
-
-        print("Received new text for ingestion. Upsert process completed successfully.")
-        return {"message": "Document ingestion successful."}
+        return {"message": f"Document '{file.filename}' ingested successfully."}
     except Exception as e:
-        print(f"Ingestion failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to ingest document: {e}")
 
 
@@ -124,8 +97,6 @@ async def run_query(request: QueryRequest):
 async def health_check():
     """Checks if the API is running."""
     return {"status": "ok"}
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
