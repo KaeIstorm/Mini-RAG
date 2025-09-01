@@ -35,7 +35,7 @@ export default function HomePage() {
     const startTime = performance.now();
     try {
       // NOTE: Replace with your actual FastAPI endpoint for ingestion.
-      const response = await fetch("http://localhost:8000/ingest", {
+      const response = await fetch("/api/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text_content: inputText }),
@@ -83,7 +83,7 @@ export default function HomePage() {
     const startTime = performance.now();
     try {
       // NOTE: Replace with your actual FastAPI endpoint for querying.
-      const response = await fetch("http://localhost:8000/query", {
+      const response = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: query }),
