@@ -1,0 +1,11 @@
+Environment variables file
+.env
+
+Next.js build output
+.next/
+
+Node.js dependencies
+node_modules/
+
+Python virtual environment
+venv/ pycache/
