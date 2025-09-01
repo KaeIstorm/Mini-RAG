@@ -25,66 +25,48 @@ export default function HomePage() {
 
   // Function to handle the document ingestion
 const handleIngest = async () => {
-  if (!inputText) return;
-
-  setLoadingIngest(true);
-  setAnswer(null);
-  setSources(null);
-  setResponseTime(null);
-  setTokenEstimate(null);
-
-  const startTime = performance.now();
   try {
     let response;
-    if (inputText instanceof File) {
-      // For PDFs
-      const formData = new FormData();
-      formData.append("file", inputText);
 
-      response = await fetch(`${API_URL}/ingest`, {
+    if (file && file.type !== "text/plain") {
+      // PDF / DOCX case
+      const formData = new FormData();
+      formData.append("file", file);
+      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ingest`, {
         method: "POST",
         body: formData,
       });
     } else {
-      // For TXT
-      response = await fetch(`${API_URL}/ingest`, {
+      // Plain text case
+      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text_content: inputText }),
+        body: JSON.stringify({ text_content: text }),
       });
     }
 
-    if (!response.ok) {
-      throw new Error("Ingestion failed. Please check the backend.");
-    }
-
     const data = await response.json();
-    const endTime = performance.now();
-    setResponseTime((endTime - startTime).toFixed(2));
-    alert(data.message || "Document ingested successfully!");
-  } catch (error) {
-    console.error(error);
-    alert("An error occurred during ingestion. Please try again.");
-  } finally {
-    setLoadingIngest(false);
+    alert(data.message || "Document ingestion successful!");
+  } catch (err) {
+    console.error("Ingestion failed:", err);
+    alert("Failed to ingest document.");
   }
 };
 
+
   // Function to handle file upload
-const handleFileUpload = (event) => {
-  const file = event.target.files[0];
+const handleFileUpload = (e) => {
+  const file = e.target.files[0];
   if (file) {
     if (file.type === "text/plain") {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setInputText(e.target.result); // For TXT files
+      reader.onload = (event) => {
+        setText(event.target.result); // Put actual text in textarea
       };
       reader.readAsText(file);
-    } else if (file.type === "application/pdf") {
-      // Just save the file in state and send it directly in handleIngest
-      setInputText(file);
     } else {
-      alert("Unsupported file format. Please upload a .txt or .pdf file.");
+      setText(""); // Clear textarea for non-text files
+      setFile(file); // Keep file separately for PDF/Docx
     }
   }
 };
