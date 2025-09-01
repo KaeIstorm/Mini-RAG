@@ -124,3 +124,13 @@ async def run_query(request: QueryRequest):
 async def health_check():
     """Checks if the API is running."""
     return {"status": "ok"}
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can restrict later to your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
