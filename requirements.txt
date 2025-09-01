@@ -9,3 +9,4 @@ langchain-pinecone
 tiktoken
 pinecone-client
 cohere
+python-multipart
