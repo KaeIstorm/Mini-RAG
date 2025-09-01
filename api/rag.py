@@ -3,12 +3,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 from langchain.retrievers.document_compressors import CohereRerank
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda, RunnableParallel
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 from langchain_pinecone import PineconeVectorStore
 
-from config import Config
-from utilities import formatDocsWithIDs
+from api.config import Config
+from api.utilities import formatDocsWithIDs
 
 def getRetriever():
     """Creates a Retriever composed of MMR Retrieval and Cohere Reranking"""
@@ -39,18 +39,6 @@ def getRetriever():
     print("Retriever and ReRanker setup and combined successfully")
     return finalRetriever
 
-def citeDocs(docs):
-    formattedStrings = []
-    for i, doc in enumerate(docs):
-        source_info = ""
-        # Check if a page number exists in the metadata (from PDF loader)
-        if 'page' in doc.metadata:
-            source_info = f"Source: Page {doc.metadata['page'] + 1}"
-            
-        formattedStrings.append(f"Source ID: {i+1} | {source_info}\nContent: {doc.page_content}")
-    
-    return "\n\n".join(formattedStrings)
-
 def ragChain(finalRetriever):
     """Put together the final RAG chain"""
 
@@ -72,32 +60,11 @@ def ragChain(finalRetriever):
     llm=ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.2)
     print("LLM Initialized")
 
-    # This function extracts the source information from the documents
-    def sourceMetadata(docs):
-        sources = []
-        for doc in docs:
-            if 'page' in doc.metadata:
-                sources.append(f"Page {doc.metadata['page'] + 1}")
-        # Return a list of unique sources
-        return list(dict.fromkeys(sources))
-
     rag=(
-        {
-            "context": finalRetriever,
-            "question": RunnablePassthrough(),
-        }
-        | RunnableParallel(
-            {
-                "answer": (
-                    RunnableLambda(lambda x: citeDocs(x["context"]))
-                    | prompt
-                    | llm
-                    | StrOutputParser()
-                ),
-                # FIX: This is the corrected line
-                "sources": RunnableLambda(lambda x: sourceMetadata(x["context"])),
-            }
-        )
+        {"context": finalRetriever | RunnableLambda(formatDocsWithIDs), "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
     )
     print("Chain built successfully")
     return rag

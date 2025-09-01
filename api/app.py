@@ -7,12 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.documents import Document
 
 # Import your RAG and Indexing functions from their respective files
-from rag import getRetriever, ragChain
-from indexing import loadAndChunk, vectorUpsert
-from config import Config
+from api.rag import getRetriever, ragChain
+from api.indexing import loadAndChunk, vectorUpsert
+from api.config import Config
 
 # Import helpers from your helpers.py file
-from utilities import getDocID, tokenCount
+from api.utilities import getDocID, tokenCount
 
 # --- Initialize the FastAPI app ---
 app = FastAPI(
@@ -87,7 +87,7 @@ async def run_query(request: QueryRequest):
     try:
         # Invoke the pre-initialized RAG chain with the user's question
         response = rag_chain.invoke(request.question)
-        return {"answer": response["answer"], "sources": response["sources"]}
+        return {"answer": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred during query processing: {e}")
 
