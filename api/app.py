@@ -1,9 +1,7 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import tiktoken
-import tempfile
-import os
 
 # Import your RAG and Indexing functions from their respective files
 from api.rag import getRetriever, ragChain
@@ -12,11 +10,6 @@ from api.config import Config
 
 # Import helpers from your helpers.py file
 from api.utilities import getDocID, tokenCount
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
-from langchain_pinecone import PineconeVectorStore
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 # --- Initialize the FastAPI app ---
 app = FastAPI(
@@ -54,43 +47,56 @@ async def startup_event():
 
 # --- API Endpoints ---
 
+# Pydantic model for the ingestion request
+class IngestRequest(BaseModel):
+    text_content: str
+
 @app.post("/ingest")
-async def ingest_document(
-    text_content: str = None,
-    file: UploadFile = File(None)
-):
+async def ingest_document(request: IngestRequest):
+    """
+    Ingests new text content, chunks it, and upserts it to the vector store.
+    This is for real-time updates from the frontend.
+    """
     try:
+        # We need to re-import the necessary libraries as they are not global to this file
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
         from langchain_core.documents import Document
+        from langchain_pinecone import PineconeVectorStore
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-        docs = []
+        # Placeholder for the chunking and upsert logic for new content
+        # 1. Create a temporary document from the incoming text
+        temp_doc = [Document(page_content=request.text_content, metadata={"source": "user_input"})]
 
-        # Case 1: Plain text ingestion
-        if text_content:
-            docs.append(Document(page_content=text_content, metadata={"source": "user_input"}))
+        # 2. Chunk the new content using your helpers
+        tokenizer = tiktoken.get_encoding("cl100k_base")
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=200, 
+            length_function=tokenCount,
+            separators=["\n\n", "\n", " ", ""]
+        )
+        new_chunks = splitter.split_documents(temp_doc)
 
-        # Case 2: File ingestion
-        if file:
-            contents = await file.read()
-            if file.filename.endswith(".pdf"):
-                from langchain_community.document_loaders import PyPDFLoader
-                import tempfile
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                    tmp.write(contents)
-                    tmp.flush()
-                    loader = PyPDFLoader(tmp.name)
-                    docs.extend(loader.load())
-            elif file.filename.endswith(".txt"):
-                docs.append(Document(page_content=contents.decode("utf-8"), metadata={"source": file.filename}))
-            # Add docx loader if needed later
+        # 3. Prepare for upsert with unique IDs
+        docs_with_ids = [doc for doc in new_chunks]
+        for doc in docs_with_ids:
+            doc_id = getDocID(doc)
+            doc.metadata["document_id"] = doc_id
 
-        # Then chunk + upsert (same as before)
-        # ...
+        # 4. Upsert into the vector store
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        vector_store = PineconeVectorStore.from_existing_index(
+            index_name=Config.PINECONE_INDEX_NAME,
+            embedding=embeddings
+        )
+        vector_store.add_documents(documents=docs_with_ids, ids=[doc.metadata["document_id"] for doc in docs_with_ids])
 
+        print("Received new text for ingestion. Upsert process completed successfully.")
         return {"message": "Document ingestion successful."}
-
     except Exception as e:
+        print(f"Ingestion failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to ingest document: {e}")
-
 
 
 # Pydantic model for the query request

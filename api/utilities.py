@@ -2,12 +2,8 @@ import tiktoken
 import hashlib
 from langchain_core.documents import Document
 
-def tokenCount(textDoc):
+def tokenCount(text):
     tokenizer=tiktoken.get_encoding("cl100k_base")
-    if isinstance(textDoc, Document):
-        text = textDoc.page_content
-    else:
-        text = str(textDoc)
     return len(tokenizer.encode(text))
 
 def getDocID(doc: Document) -> str:

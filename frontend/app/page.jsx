@@ -24,52 +24,51 @@ export default function HomePage() {
   const [loadingIngest, setLoadingIngest] = useState(false);
 
   // Function to handle the document ingestion
-const handleIngest = async () => {
-  try {
-    let response;
+  const handleIngest = async () => {
+    if (!inputText) return;
 
-    if (file && file.type !== "text/plain") {
-      // PDF / DOCX case
-      const formData = new FormData();
-      formData.append("file", file);
-      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ingest`, {
-        method: "POST",
-        body: formData,
-      });
-    } else {
-      // Plain text case
-      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ingest`, {
+    setLoadingIngest(true);
+    setAnswer(null); // Clear previous results
+    setSources(null);
+    setResponseTime(null);
+    setTokenEstimate(null);
+
+    const startTime = performance.now();
+    try {
+      // NOTE: Replace with your actual FastAPI endpoint for ingestion.
+      const response = await fetch(`${API_URL}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text_content: text }),
+        body: JSON.stringify({ text_content: inputText }),
       });
+
+      if (!response.ok) {
+        throw new Error("Ingestion failed. Please check the backend.");
+      }
+
+      const data = await response.json();
+      const endTime = performance.now();
+      setResponseTime((endTime - startTime).toFixed(2));
+      alert(data.message || "Document ingested successfully!");
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred during ingestion. Please try again.");
+    } finally {
+      setLoadingIngest(false);
     }
-
-    const data = await response.json();
-    alert(data.message || "Document ingestion successful!");
-  } catch (err) {
-    console.error("Ingestion failed:", err);
-    alert("Failed to ingest document.");
-  }
-};
-
+  };
 
   // Function to handle file upload
-const handleFileUpload = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    if (file.type === "text/plain") {
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setText(event.target.result); // Put actual text in textarea
+      reader.onload = (e) => {
+        setInputText(e.target.result);
       };
       reader.readAsText(file);
-    } else {
-      setText(""); // Clear textarea for non-text files
-      setFile(file); // Keep file separately for PDF/Docx
     }
-  }
-};
+  };
 
   // Function to handle the user's query
   const handleQuery = async (e) => {
@@ -158,7 +157,7 @@ const handleFileUpload = (e) => {
               <input
                 id="file-upload"
                 type="file"
-                accept=".txt,.pdf"
+                accept=".txt"
                 onChange={handleFileUpload}
                 className="hidden"
               />
