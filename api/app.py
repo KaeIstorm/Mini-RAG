@@ -87,7 +87,7 @@ async def run_query(request: QueryRequest):
     try:
         # Invoke the pre-initialized RAG chain with the user's question
         response = rag_chain.invoke(request.question)
-        return {"answer": response}
+        return {"answer": response["answer"], "sources": response["sources"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred during query processing: {e}")
 
