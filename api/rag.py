@@ -69,10 +69,7 @@ def ragChain(finalRetriever):
         Answer:"""
 
     prompt = ChatPromptTemplate.from_template(template)
-    llm=ChatGoogleGenerativeAI(
-        model="gemini-1.5-pro-latest", 
-        temperature=0.2
-        )
+    llm=ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.2)
     print("LLM Initialized")
 
     # This function extracts the source information from the documents
