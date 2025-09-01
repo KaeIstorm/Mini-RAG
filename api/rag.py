@@ -71,5 +71,5 @@ def ragChain(finalRetriever):
 
 if __name__=="__main__":
     print("Starting RAG Query pipeline")
-    retriever=getRetriever
+    retriever=getRetriever()
     rag=ragChain(retriever)

@@ -41,7 +41,7 @@ def vectorUpsert(chunks: list):
     #preparing docs for upserting
     docsWithIDs=[]
     for doc in chunks:
-        docID=docsWithIDs(doc)
+        docID=getDocID(doc)
         doc.metadata["document_id"]=docID
         docsWithIDs.append(doc)
 
