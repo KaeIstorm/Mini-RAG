@@ -71,8 +71,7 @@ def ragChain(finalRetriever):
     prompt = ChatPromptTemplate.from_template(template)
     llm=ChatGoogleGenerativeAI(
         model="gemini-1.5-pro-latest", 
-        temperature=0.2,
-        max_output_tokens=4096
+        temperature=0.2
         )
     print("LLM Initialized")
 
