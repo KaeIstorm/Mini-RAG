@@ -1,12 +1,122 @@
-Mini RAG: A Retrieval-Augmented Generation ApplicationLive Demo URL[Your Vercel Deployment URL Here]Project SummaryThis project is a Retrieval-Augmented Generation (RAG) application that enables users to chat with their custom documents in real time. The backend, built with FastAPI and LangChain, processes user-provided text, embeds it into a vector database, and uses a powerful RAG pipeline to answer questions based on the document's content. The frontend, a modern Next.js application, provides a clean and intuitive interface for document ingestion and real-time querying.Core TechnologiesBackendFastAPI: A high-performance Python web framework for building the API.LangChain: The framework that orchestrates the entire RAG pipeline.Pinecone: A cloud-hosted vector database for storing and retrieving document embeddings.Google Gemini API: Used for generating high-quality text embeddings (models/embedding-001) and for text generation (gemini-2.5-pro).Cohere Rerank: An external API used to improve the accuracy of search results.FrontendNext.js: A React framework for building a fast, scalable, and responsive user interface.Tailwind CSS: A utility-first CSS framework for a modern and clean design.Project ArchitectureThe application is structured into two main parts: an offline indexing process and a real-time query API. This separation of concerns ensures that the application is fast, scalable, and efficient.The workflow is as follows:Indexing (Offline/On-Demand): Raw documents are loaded, split into chunks, and embedded into vectors. These vectors are then stored in a Pinecone index.Retrieval: When a user submits a query, a sophisticated retriever first fetches a broad set of relevant documents from the Pinecone index. A Cohere Reranker then refines these results to ensure the most relevant documents are passed to the LLM.Generation: The Google Gemini Pro model receives the user's question along with the highly-relevant document chunks. It generates a concise, grounded answer with inline citations.Quick StartFollow these steps to get the application running locally.1. Environment SetupClone the repository: git clone [your_repo_url]Create a Python virtual environment in the api folder and install dependencies:cd api
-pip install -r requirements.txt
-Create a Next.js frontend in the frontend folder and install dependencies:cd ../frontend
-npm install
-Configure environment variables:Get your API keys for Google Gemini, Pinecone, and Cohere.Create a .env file in the root directory and add your keys:GOOGLE_API_KEY=your_gemini_api_key
-PINECONE_API_KEY=your_pinecone_api_key
-PINECONE_INDEX_NAME=your_pinecone_index_name
-COHERE_API_KEY=your_cohere_api_key
-2. Initial Document IndexingBefore starting the API, you must populate the vector database with your initial documents.From the project root, run the indexing script:python indexing.py
-This script will load docs/file.txt, embed the content, and upsert it to your Pinecone index.3. Run the ApplicationOpen your first terminal in the api folder and start the FastAPI server:uvicorn app:app --reload
-Open a second terminal in the frontend folder and start the Next.js development server:npm run dev
-The application will be available at http://localhost:3000.Remarks[Provide a short summary of your design choices here. Discuss any trade-offs you made, such as using a simpler chunking strategy, and how you would improve the project if you had more time.]
+### **Project Documentation: Mini RAG Application**
+
+This document provides a comprehensive, formal, and technical overview of the Mini RAG application, detailing its architecture, components, setup, and usage.
+
+-----
+
+### **1. Executive Summary**
+
+The Mini RAG application is a full-stack, end-to-end system designed for real-time, document-based question-answering. It leverages a modern Retrieval-Augmented Generation (RAG) pipeline to ingest documents, generate vector embeddings, and provide context-aware answers with verifiable citations. The system is architecturally separated into a front-end hosted on Vercel and a backend hosted on Render, ensuring modularity and a clear division of responsibilities.
+
+-----
+
+### **2. System Architecture**
+
+The application operates on a client-server model, utilizing a three-tiered architecture.
+
+  - **Tier 1: Frontend (Next.js)**: The user interface is developed with Next.js, and is hosted on **Vercel**. It is responsible for user interactions, including document uploads and question submissions, and for displaying the final answers and citations.
+
+  - **Tier 2: Backend (FastAPI)**: The API layer is built with FastAPI and is hosted on **Render**. It orchestrates the entire RAG pipeline, handling data ingestion, retrieval, and LLM-based generation.
+
+  - **Tier 3: Vector Database (Pinecone)**: An external vector store that serves as the system's knowledge base. It stores vector embeddings of document chunks, enabling efficient semantic search operations.
+
+The data flow is a two-phase process: ingestion and querying. During ingestion, documents are processed, chunked, and vectorized before being stored in Pinecone. During querying, the system retrieves relevant document chunks from Pinecone, uses them as context for a large language model, and returns a final, cited answer.
+
+-----
+
+### **3. Technical Components**
+
+#### **3.1 Backend Components**
+
+  * `Config.py`: A centralized configuration file for managing all environment variables, including API keys for Google, Pinecone, and Cohere.
+  * `utilities.py`: Contains helper functions for token counting, unique document ID generation, and document formatting for LLM context.
+  * `indexing.py`: A dedicated script for the document ingestion and indexing process. It loads documents, splits them into chunks using a `RecursiveCharacterTextSplitter`, and upserts the corresponding vector embeddings into the Pinecone index.
+  * `rag.py`: The core of the RAG pipeline. It initializes a **Maximal Marginal Relevance (MMR)** retriever with a **Cohere Re-ranker** to improve document relevance. The RAG chain is constructed using LangChain's expression language, concurrently handling answer generation and source extraction for citations.
+  * `app.py`: The FastAPI application server. It exposes `/ingest` and `/query` endpoints for file processing and question answering. It also pre-initializes the RAG chain upon startup to minimize latency for subsequent queries.
+
+#### **3.2 Frontend Components**
+
+  * `HomePage.js`: The primary React component that manages application state, handles API interactions with the backend, and dynamically renders the user interface. It is configured to send requests to the live backend URL hosted on Render.
+
+-----
+
+### **4. Deployment and Setup**
+
+#### **4.1 Prerequisites**
+
+  - Python 3.8+
+  - Node.js and npm
+  - API keys for Google, Pinecone, and Cohere.
+
+#### **4.2 Local Setup**
+
+**Backend:**
+
+1.  Navigate to the project's root directory.
+2.  Create a Python virtual environment and activate it.
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate
+    ```
+3.  Install dependencies from `requirements.txt`.
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Create a `.env` file and add your API keys.
+    ```
+    GOOGLE_API_KEY="your_google_api_key_here"
+    PINECONE_API_KEY="your_pinecone_api_key_here"
+    PINECONE_INDEX_NAME="your-pinecone-index-name"
+    COHERE_API_KEY="your_cohere_api_key_here"
+    ```
+5.  Run the `indexing.py` script once to create and populate your Pinecone index.
+    ```bash
+    python api/indexing.py
+    ```
+6.  Start the FastAPI server.
+    ```bash
+    uvicorn api.app:app --reload
+    ```
+    The API will be available at `http://localhost:8000`.
+
+**Frontend:**
+
+1.  Navigate to the `frontend` directory.
+    ```bash
+    cd frontend
+    ```
+2.  Install Node.js dependencies.
+    ```bash
+    npm install
+    ```
+3.  Create a `.env.local` file and set the backend API URL to the local address.
+    ```
+    NEXT_PUBLIC_API_URL="http://localhost:8000"
+    ```
+4.  Start the Next.js development server.
+    ```bash
+    npm run dev
+    ```
+    The frontend will be available at `http://localhost:3000`.
+
+#### **4.3 Deployment**
+
+For deployment to a live environment, the project is configured for Vercel (frontend) and Render (backend). The API keys should be set as environment variables on the respective hosting platforms.
+
+-----
+
+### **5. Usage Instructions**
+
+1.  **Ingestion:** Use the provided interface to either paste text or upload a `.txt` or `.pdf` file. This action triggers the `/ingest` endpoint on the backend, updating the Pinecone index.
+2.  **Querying:** Enter a question into the text field in the "Ask a Question" section and submit the query.
+3.  **Output:** The front-end will display the generated answer and a list of sources, such as page numbers, formatted as citations.
+
+-----
+
+### **6. Limitations and Future Work**
+
+  - **File Support**: Current support is limited to `.txt` and `.pdf` files. Future work could extend this to include `.docx`, `.md`, and other common document formats.
+  - **Conversation History**: The application is stateless and does not maintain conversation history. Implementing a session-based chat history would improve the user experience by allowing for follow-up questions and more coherent conversations.
+  - **Evaluation**: The current evaluation is a manual, "gold set" based approach. Future work could include the implementation of an automated evaluation framework to systematically measure the RAG pipeline's performance.
+
+-----
