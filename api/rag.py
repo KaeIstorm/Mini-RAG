@@ -45,9 +45,8 @@ def ragChain(finalRetriever):
     template="""
         You are a helpful assistant for question-answering tasks.
         Use the following pieces of retrieved context to answer the question.
-        If you have any internal information about the question that you are 100% confident about without any margin for error in case you find it lacking in details, use it.  
         If you don't know the answer, just say that you don't know, and be graceful about it.
-        Generate the answer based on it how the user demands it. By default, generate a concise answer, and if the user demands a detailed answer, provide that. Also provide inline citations from the documents.
+        Generate a concise answer and provide inline citations from the documents.
         The citations should be formatted as [Source ID].
 
         Context:
