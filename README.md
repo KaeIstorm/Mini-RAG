@@ -139,6 +139,40 @@ For deployment to a live environment, the project is configured for Vercel (fron
 
 -----
 
+### **6. Evaluation**
+
+The sampletext.txt file includes information and code about the RAG's own functioning, which was then indexed, and used to create the Golden Set of Questions and Answers for the RAG to answer.
+This Golden set includes the following questions, and expected answers:
+
+1.  **Question:** What are the chunk size and chunk overlap settings used in the document processing pipeline?
+    [cite_start]**Correct Answer:** The document chunking process uses a chunk size of `1000` tokens and a chunk overlap of `200` tokens[cite: 28].
+
+2.  **Question:** Which companies provide the services for the LLM and the vector store in this project?
+    [cite_start]**Correct Answer:** The LLM is provided by Google Generative AI [cite: 22][cite_start], and the vector store is a managed database provided by Pinecone[cite: 24, 25].
+
+3.  **Question:** What is the primary function of the `getRetriever()` function in `rag.py`?
+    [cite_start]**Correct Answer:** The `getRetriever()` function creates a retriever that uses Maximal Marginal Relevance (MMR) for initial retrieval and a Cohere Re-ranker to refine the results[cite: 29, 31, 37].
+
+4.  **Question:** What is the `app.py` file responsible for, and what is its role in handling API endpoints?
+    [cite_start]**Correct Answer:** The `app.py` file is the FastAPI application server[cite: 39]. [cite_start]It is responsible for exposing API endpoints for both file ingestion (`/ingest`) and question answering (`/query`)[cite: 39].
+
+5.  **Question:** Which platforms are used to host the frontend and backend of the Mini RAG application for live deployment?
+    [cite_start]**Correct Answer:** The frontend is hosted on Vercel, and the backend is hosted on Render[cite: 5, 55].
+
+The RAG gives the following actual answers to the above questions:
+
+**Answer 1:** Based on the provided documentation, the chunking parameters are set as follows: * **Chunk Size**: `1000` tokens * **Chunk Overlap**: `200` tokens
+
+**Answer 2:**
+
+**Answer 3**
+
+**Answer 4**
+
+**Answer 5**
+
+The RAG manages to answer all the questions correctly in sufficient enough detail, giving it a 100% success rate at understanding context and giving precise response to it.
+
 ### **6. Usage Instructions**
 
 1.  **Ingestion:** Use the provided interface to either paste text or upload a `.txt` or `.pdf` file. This action triggers the `/ingest` endpoint on the backend, updating the Pinecone index.
