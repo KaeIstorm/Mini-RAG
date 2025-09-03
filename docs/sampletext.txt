@@ -1,1 +1,833 @@
-Population check
+The Mini-RAG application is a small, simple RAG developed over 24 hours for the PreDusk technologies Hiring Assessment.
+
+Here is some key information about it:
+
+### **Project Documentation: Mini RAG Application**
+
+This document provides a comprehensive, formal, and technical overview of the Mini RAG application, detailing its architecture, components, setup, and usage.
+
+-----
+
+### **1. Executive Summary**
+
+The Mini RAG application is a full-stack, end-to-end system designed for real-time, document-based question-answering. It leverages a modern Retrieval-Augmented Generation (RAG) pipeline to ingest documents, generate vector embeddings, and provide context-aware answers with verifiable citations. The system is architecturally separated into a front-end hosted on Vercel and a backend hosted on Render, ensuring modularity and a clear division of responsibilities.
+
+-----
+
+### **2. System Architecture**
+
+The application operates on a client-server model, utilizing a three-tiered architecture.
+
+  - **Tier 1: Frontend (Next.js)**: The user interface is developed with Next.js, and is hosted on **Vercel**. It is responsible for user interactions, including document uploads and question submissions, and for displaying the final answers and citations.
+
+  - **Tier 2: Backend (FastAPI)**: The API layer is built with FastAPI and is hosted on **Render**. It orchestrates the entire RAG pipeline, handling data ingestion, retrieval, and LLM-based generation.
+
+  - **Tier 3: Vector Database (Pinecone)**: An external vector store that serves as the system's knowledge base. It stores vector embeddings of document chunks, enabling efficient semantic search operations.
+
+The data flow is a two-phase process: ingestion and querying. During ingestion, documents are processed, chunked, and vectorized before being stored in Pinecone. During querying, the system retrieves relevant document chunks from Pinecone, uses them as context for a large language model, and returns a final, cited answer.
+
+-----
+
+### **3. RAG Pipeline Details**
+
+#### **3.1 Architecture Diagram**
+
+The following diagram illustrates the high-level architecture and data flow of the Mini RAG system:
+
+#### **3.2 Providers and Models**
+
+| Component             | Provider/Library           | Model/Service Used                  |
+| --------------------- | -------------------------- | ----------------------------------- |
+| **Embeddings** | Google Generative AI       | `models/embedding-001`              |
+| **LLM** | Google Generative AI       | `gemini-2.5-pro`                    |
+| **Vector Store** | Pinecone                   | Managed Vector Database             |
+| **Re-ranking** | Cohere                     | `rerank-english-v3.0`               |
+
+#### **3.3 Chunking Parameters**
+
+The document chunking process is configured with the following parameters to balance chunk size and context preservation:
+
+  - **Chunk Size**: `1000` tokens
+  - **Chunk Overlap**: `200` tokens
+  - **Separator Priority**: `["\n\n", "\n", " ", ""]`
+
+This configuration ensures that each chunk is large enough to contain meaningful context while the overlap helps maintain continuity across chunks, preventing critical information from being split.
+
+#### **3.4 Retriever and Re-ranker Settings**
+
+The retrieval process is optimized for both relevance and diversity:
+
+  - **Base Retriever**: Uses **Maximal Marginal Relevance (MMR)** to fetch an initial set of diverse, relevant documents. It is configured with `search_kwargs={"fetch_k": 50, "k": 10}`. This means it retrieves the **top 50** most similar documents from the vector store and then selects the **top 10** among them that are most diverse.
+  - **Contextual Re-ranker**: The `CohereRerank` model is then applied to the top 10 documents to re-rank them based on their semantic relevance to the query. The final context provided to the LLM consists of the `top_n=3` most relevant documents after re-ranking.
+
+-----
+
+### **4. Technical Components**
+
+#### **4.1 Backend Components**
+
+  * `Config.py`: A centralized configuration file for managing all environment variables, including API keys for Google, Pinecone, and Cohere.
+  * `utilities.py`: Contains helper functions for token counting, unique document ID generation, and document formatting for LLM context.
+  * `indexing.py`: A dedicated script for the document ingestion and indexing process. It loads documents, splits them into chunks using a `RecursiveCharacterTextSplitter`, and upserts the corresponding vector embeddings into the Pinecone index.
+  * `rag.py`: The core of the RAG pipeline. It initializes a **Maximal Marginal Relevance (MMR)** retriever with a **Cohere Re-ranker** to improve document relevance. The RAG chain is constructed using LangChain's expression language, concurrently handling answer generation and source extraction for citations.
+  * `app.py`: The FastAPI application server. It exposes `/ingest` and `/query` endpoints for file processing and question answering. It also pre-initializes the RAG chain upon startup to minimize latency for subsequent queries.
+
+#### **4.2 Frontend Components**
+
+  * `HomePage.js`: The primary React component that manages application state, handles API interactions with the backend, and dynamically renders the user interface. It is configured to send requests to the live backend URL hosted on Render.
+
+-----
+
+### **5. Deployment and Setup**
+
+#### **5.1 Prerequisites**
+
+  - Python 3.8+
+  - Node.js and npm
+  - API keys for Google, Pinecone, and Cohere.
+
+#### **5.2 Local Setup**
+
+**Backend:**
+
+1.  Navigate to the project's root directory.
+2.  Create a Python virtual environment and activate it.
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate
+    ```
+3.  Install dependencies from `requirements.txt`.
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Create a `.env` file and add your API keys.
+    ```
+    GOOGLE_API_KEY="your_google_api_key_here"
+    PINECONE_API_KEY="your_pinecone_api_key_here"
+    PINECONE_INDEX_NAME="your-pinecone-index-name"
+    COHERE_API_KEY="your_cohere_api_key_here"
+    ```
+5.  Run the `indexing.py` script once to create and populate your Pinecone index.
+    ```bash
+    python api/indexing.py
+    ```
+6.  Start the FastAPI server.
+    ```bash
+    uvicorn api.app:app --reload
+    ```
+    The API will be available at `http://localhost:8000`.
+
+**Frontend:**
+
+1.  Navigate to the `frontend` directory.
+    ```bash
+    cd frontend
+    ```
+2.  Install Node.js dependencies.
+    ```bash
+    npm install
+    ```
+3.  Create a `.env.local` file and set the backend API URL to the local address.
+    ```
+    NEXT_PUBLIC_API_URL="http://localhost:8000"
+    ```
+4.  Start the Next.js development server.
+    ```bash
+    npm run dev
+    ```
+    The frontend will be available at `http://localhost:3000`.
+
+#### **5.3 Deployment**
+
+For deployment to a live environment, the project is configured for Vercel (frontend) and Render (backend). The API keys should be set as environment variables on the respective hosting platforms.
+
+-----
+
+### **6. Usage Instructions**
+
+1.  **Ingestion:** Use the provided interface to either paste text or upload a `.txt` or `.pdf` file. This action triggers the `/ingest` endpoint on the backend, updating the Pinecone index.
+2.  **Querying:** Enter a question into the text field in the "Ask a Question" section and submit the query.
+3.  **Output:** The front-end will display the generated answer and a list of sources, such as page numbers, formatted as citations.
+
+-----
+
+### **7. Limitations and Future Work**
+
+  - **File Support**: Current support is limited to `.txt` and `.pdf` files. Future work could extend this to include `.docx`, `.md`, and other common document formats.
+  - **Conversation History**: The application is stateless and does not maintain conversation history. Implementing a session-based chat history would improve the user experience by allowing for follow-up questions and more coherent conversations.
+  - **Evaluation**: The current evaluation is a manual, "gold set" based approach. Future work could include the implementation of an automated evaluation framework to systematically measure the RAG pipeline's performance.
+
+-----
+
+Now Here is the file system for it.
+
+MINI RAG
+├── __pycache__
+├── api
+│   ├── __pycache__
+│   ├── __init__.py
+│   ├── app.py
+│   ├── config.py
+│   ├── indexing.py
+│   ├── rag.py
+│   └── utilities.py
+├── docs
+│   └── sampletext.txt
+├── frontend
+│   ├── .next
+│   ├── app
+│   ├── node_modules
+│   ├── public
+│   ├── .env.local
+│   ├── .gitignore
+│   ├── eslint.config.mjs
+│   ├── next-env.d.ts
+│   ├── next.config.ts
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.mjs
+│   ├── README.md
+│   └── tsconfig.json
+├── .env
+├── .gitignore
+├── RAG Project.rar
+├── README.md
+└── requirements.txt
+
+Here is the code for the following files:
+
+1.) app.py
+
+from fastapi import FastAPI, HTTPException, File, UploadFile
+from pydantic import BaseModel
+from typing import Dict, Any
+import tiktoken
+import os
+from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.documents import Document
+
+# Import your RAG and Indexing functions from their respective files
+from api.rag import getRetriever, ragChain
+from api.indexing import loadAndChunk, vectorUpsert
+from api.config import Config
+
+# Import helpers from your helpers.py file
+from api.utilities import getDocID, tokenCount
+
+# --- Initialize the FastAPI app ---
+app = FastAPI(
+    title="Mini RAG Application",
+    description="A simple API for document-based question answering using a RAG pipeline.",
+    version="1.0.0"
+)
+
+# Global variables to hold the RAG components
+retriever = None
+rag_chain = None
+
+# --- Startup Event ---
+# This runs once when the API starts. It's crucial for performance.
+@app.on_event("startup")
+async def startup_event():
+    global retriever, rag_chain
+    try:
+     # NOTE: This part assumes you have already run 'indexing.py' once
+        # to populate your Pinecone index.
+        # This startup event only initializes the query-time components.
+
+        # 1. Initialize the retriever (connects to your populated Pinecone index)
+        retriever = getRetriever()
+        
+        # 2. Initialize the full RAG chain
+        rag_chain = ragChain(retriever)
+        
+        print("API startup complete. RAG pipeline is ready!")
+
+    except Exception as e:
+        print(f"Failed to initialize RAG pipeline: {e}")
+        raise HTTPException(status_code=500, detail=f"Server startup failed: {e}")
+
+# --- API Endpoints ---
+
+@app.post("/ingest")
+async def ingest_document(file: UploadFile = File(...)):
+    """
+    Ingests a new document file (e.g., PDF, TXT), chunks it, and upserts to the vector store.
+    """
+    try:
+        # Save the uploaded file temporarily
+        file_path = f"/tmp/{file.filename}"
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+
+        # Now call your updated load and chunk function
+        chunks = loadAndChunk(file_path)
+        vectorUpsert(chunks)
+
+        # Remove the temporary file
+        os.remove(file_path)
+
+        return {"message": f"Document '{file.filename}' ingested successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to ingest document: {e}")
+
+
+# Pydantic model for the query request
+class QueryRequest(BaseModel):
+    question: str
+
+@app.post("/query")
+async def run_query(request: QueryRequest):
+    """
+    Queries the RAG pipeline with a user's question.
+    """
+    if not rag_chain:
+        raise HTTPException(status_code=503, detail="RAG service is not ready.")
+
+    try:
+        # Invoke the pre-initialized RAG chain with the user's question
+        response = rag_chain.invoke(request.question)
+        return {"answer": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred during query processing: {e}")
+
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Checks if the API is running."""
+    return {"status": "ok"}
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can restrict later to your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+2.) config.py
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Config:
+    GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY")
+    PINECONE_API_KEY=os.getenv("PINECONE_API_KEY")
+    PINECONE_INDEX_NAME=os.getenv("PINECONE_INDEX_NAME")
+    COHERE_API_KEY=os.getenv("COHERE_API_KEY")
+    DOC_PATH="docs/sampletext.txt"
+
+3.) indexing.py
+
+#import libraries
+import os
+from pinecone import Pinecone
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain.document_loaders import TextLoader, PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+#import modules
+from api.config import Config
+from api.utilities import getDocID, tokenCount
+
+#loading and chunking the document
+def loadAndChunk(path:str):
+    """Loads the provided text and chunks it."""
+    
+    if path.endswith(".pdf"):
+        loader = PyPDFLoader(path)
+    else:
+        loader = TextLoader(path)
+        
+    #document loading
+    documents=loader.load()
+    print("Documents loaded successfully!")
+
+    #document chunking
+    splitter=RecursiveCharacterTextSplitter(
+        chunk_size=1000, 
+        chunk_overlap=200, 
+        length_function=tokenCount,
+        separators=["\n\n", "\n", " ", ""]
+    )
+    print("Documents chunked successfully!")
+    
+    return splitter.split_documents(documents)
+
+#create vector embedings and store them in a vector DB
+def vectorUpsert(chunks: list):
+    """Translates the document chunks into vector embeddings and upserts them to a vector DB (Pinecone in this case)"""
+    from langchain_pinecone import PineconeVectorStore
+
+    #vector embeddings
+    embeddings=GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    print("Documnents embedded successfully")
+
+    #preparing docs for upserting
+    docsWithIDs=[]
+    for doc in chunks:
+        docID=getDocID(doc)
+        doc.metadata["document_id"]=docID
+        docsWithIDs.append(doc)
+
+    pc = Pinecone(api_key=Config.PINECONE_API_KEY)
+
+    if Config.PINECONE_INDEX_NAME in [index['name'] for index in pc.list_indexes()]:
+        print("Index already exists. Performing upsert...")
+        # Initialize an existing PineconeVectorStore instance
+        vectorStore = PineconeVectorStore.from_existing_index(
+            index_name=Config.PINECONE_INDEX_NAME,
+            embedding=embeddings
+        )
+        # Use the add_documents method to upsert
+        vectorStore.add_documents(documents=docsWithIDs, ids=[doc.metadata["document_id"] for doc in docsWithIDs])
+    else:
+        print("Index does not exist. Creating and populating for the first time...")
+        # This line is for initial population only
+        PineconeVectorStore.from_documents(
+            documents=docsWithIDs,
+            embedding=embeddings,
+            index_name=Config.PINECONE_INDEX_NAME
+        )
+        print("Embedding and storage completed")
+
+if __name__=="__main__":
+    print("Starting Document Indexing")
+    chunks=loadAndChunk(Config.DOC_PATH)
+    vectorUpsert(chunks)
+    print("Indexing complete")
+
+4.) rag.py
+
+import os
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain.retrievers.document_compressors import CohereRerank
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+from langchain_core.output_parsers import StrOutputParser
+from langchain_pinecone import PineconeVectorStore
+
+from api.config import Config
+from api.utilities import formatDocsWithIDs
+
+def getRetriever():
+    """Creates a Retriever composed of MMR Retrieval and Cohere Reranking"""
+    
+    embeddings=GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    vectorStore = PineconeVectorStore.from_existing_index(
+        index_name=Config.PINECONE_INDEX_NAME,
+        embedding=embeddings
+    )
+    print("Vector store connection established.")
+
+    retriever=vectorStore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"fetch_k":50, "k":10}
+    )
+
+    compressor=CohereRerank(
+        model="rerank-english-v3.0",
+        cohere_api_key=Config.COHERE_API_KEY,
+        top_n=3
+    )
+
+    finalRetriever=ContextualCompressionRetriever(
+        base_compressor=compressor,
+        base_retriever=retriever
+    )
+
+    print("Retriever and ReRanker setup and combined successfully")
+    return finalRetriever
+
+def ragChain(finalRetriever):
+    """Put together the final RAG chain"""
+
+    template = """
+        You are a helpful assistant for question-answering tasks.
+        Use the following pieces of retrieved context to answer the question.
+        If you don't know the answer, just say that you don't know, and be graceful about it.
+        Generate a concise answer and provide inline citations from the documents.
+        The citations should be formatted as [Page X] for PDF sources.
+        If a source has no page number, do not provide a citation for that piece of information.
+
+        Context:
+        {context}
+
+        Question: {question}
+
+        Answer:"""
+
+    prompt = ChatPromptTemplate.from_template(template)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.2)
+    print("LLM Initialized")
+
+    rag = (
+        {"context": finalRetriever | RunnableLambda(formatDocsWithIDs), "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+    print("Chain built successfully")
+    return rag
+
+if __name__=="__main__":
+    print("Starting RAG Query pipeline")
+    retriever=getRetriever()
+    rag=ragChain(retriever)
+
+5.) utilities.py
+
+import tiktoken
+import hashlib
+from langchain_core.documents import Document
+
+def tokenCount(text):
+    tokenizer=tiktoken.get_encoding("cl100k_base")
+    return len(tokenizer.encode(text))
+
+def getDocID(doc: Document) -> str:
+    """Generates a unique, stable ID for a document chunk."""
+    content_hash = hashlib.sha256(doc.page_content.encode('utf-8')).hexdigest()
+    # Combine with metadata to make it more unique
+    metadata_string = str(doc.metadata)
+    metadata_hash = hashlib.sha256(metadata_string.encode('utf-8')).hexdigest()
+    return f"{content_hash}-{metadata_hash}"
+
+def formatDocsWithIDs(docs):
+    """
+    Formats documents for the LLM. For PDFs, it includes a page number citation.
+    For other documents, it includes the content without a citation.
+    """
+    formatted_output = []
+    for i, doc in enumerate(docs):
+        # Check if the document has a 'page' key in its metadata, indicating it's a PDF chunk
+        if "page" in doc.metadata:
+            formatted_output.append(f"Source: Page {doc.metadata['page']}\nContent: {doc.page_content}")
+        else:
+            # For other document types, just provide the content without a source ID
+            formatted_output.append(f"Content: {doc.page_content}")
+            
+    return "\n\n".join(formatted_output)
+
+6.) frontend/app/page.jsx
+
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// These icons were causing a compilation error.
+// They have been replaced with text-based alternatives.
+const IngestIcon = () => <span>[UPLOAD]</span>;
+const QueryIcon = () => <span>[SEARCH]</span>;
+const SpinnerIcon = () => <span>[LOADING]</span>;
+
+// This is the main component for the home page of your Next.js app.
+// It contains all the logic and UI for the RAG application.
+export default function HomePage() {
+  // State for managing UI interactions and data
+  const [inputText, setInputText] = useState("");
+  const [file, setFile] = useState(null);
+  const [query, setQuery] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const [sources, setSources] = useState(null);
+  const [responseTime, setResponseTime] = useState(null);
+  const [tokenEstimate, setTokenEstimate] = useState(null);
+  const [loadingQuery, setLoadingQuery] = useState(false);
+  const [loadingIngest, setLoadingIngest] = useState(false);
+
+  // Function to handle the document ingestion
+  const handleIngest = async () => {
+    // Check if there is a file or text content to ingest
+    if (!file && !inputText) {
+      alert("Please select a file or paste text to ingest.");
+      return;
+    }
+
+    setLoadingIngest(true);
+    setAnswer(null); // Clear previous results
+    setSources(null);
+    setResponseTime(null);
+    setTokenEstimate(null);
+
+    const formData = new FormData();
+    
+    if (file) {
+      formData.append("file", file);
+    } else {
+      // If no file, create a temporary text file from the input
+      const blob = new Blob([inputText], { type: "text/plain" });
+      formData.append("file", blob, "pasted_text.txt");
+    }
+
+    const startTime = performance.now();
+    try {
+      // NOTE: Replace with your actual FastAPI endpoint for ingestion.
+      const response = await fetch(`${API_URL}/ingest`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Ingestion failed. Please check the backend.");
+      }
+
+      const data = await response.json();
+      const endTime = performance.now();
+      setResponseTime((endTime - startTime).toFixed(2));
+      alert(data.message || "Document ingested successfully!");
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred during ingestion. Please try again.");
+    } finally {
+      setLoadingIngest(false);
+    }
+  };
+  
+  // Function to handle file selection
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setInputText(""); // Clear text area if a file is selected
+    }
+  };
+
+  // Function to handle the user's query
+  const handleQuery = async (e) => {
+    e.preventDefault();
+    if (!query) return;
+
+    setLoadingQuery(true);
+    setAnswer(null); // Clear previous results
+    setSources(null);
+    setResponseTime(null);
+    setTokenEstimate(null);
+
+    const startTime = performance.now();
+    try {
+      // NOTE: Replace with your actual FastAPI endpoint for querying.
+      const response = await fetch(`${API_URL}/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: query }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Query failed. Please check the backend.");
+      }
+
+      const data = await response.json();
+      const endTime = performance.now();
+
+      if (data.answer.toLowerCase().includes("i don't know")) {
+        setAnswer("I'm sorry, I couldn't find an answer to that question in the provided documents.");
+        setSources(null);
+      } else {
+        // Parse citations from the answer string
+        const citationRegex = /\[Page (\d+)]/g; // CHANGE THIS LINE
+        const formattedAnswer = data.answer.replace(citationRegex, (match, page) => {
+          return `<sup>[p.${page}]</sup>`;
+        });
+        setAnswer(formattedAnswer);
+        setSources(data.sources); // Assumes backend returns sources in a 'sources' key
+      }
+      
+      setResponseTime((endTime - startTime).toFixed(2));
+      // NOTE: These are mock estimates for now. Your backend can return real ones.
+      setTokenEstimate(Math.floor(data.answer.length / 4));
+
+    } catch (error) {
+      console.error(error);
+      setAnswer("An error occurred. Please try again.");
+    } finally {
+      setLoadingQuery(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-200 p-8 flex flex-col items-center">
+      {/* Title */}
+      <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
+        <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-2 leading-tight tracking-tight">
+          Mini RAG 
+        </h1>
+        <p className="text-lg md:text-xl font-medium text-center text-blue-300 mb-8">
+          Chat with your documents in real-time.
+        </p>
+      </motion.div>
+
+      <div className="w-full max-w-3xl space-y-8">
+        {/* Document Ingestion Panel */}
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+            <h2 className="text-2xl font-bold mb-4 text-white">1. Index a Document</h2>
+            <p className="text-sm text-gray-400 mb-4">Paste or upload a text file. This will update the knowledge base for your RAG.</p>
+            <textarea
+              className="w-full h-40 p-4 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              placeholder="Paste your text here..."
+              value={inputText}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                if (file) setFile(null); // Clear file state if text is being typed
+              }}
+            />
+            
+            <div className="flex items-center space-x-4 mt-4">
+              <label htmlFor="file-upload" className="w-1/2 flex items-center justify-center space-x-2 bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition-colors cursor-pointer">
+                <IngestIcon />
+                <span>{file ? file.name : "Upload File"}</span>
+              </label>
+              <input
+                id="file-upload"
+                type="file"
+                accept=".txt,.pdf"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={handleIngest}
+                disabled={loadingIngest || (!inputText && !file)}
+                className="w-1/2 flex items-center justify-center space-x-2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+              >
+                {loadingIngest ? (
+                  <>
+                    <SpinnerIcon />
+                    <span>Indexing...</span>
+                  </>
+                ) : (
+                  <>
+                    <IngestIcon />
+                    <span>Index Document</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Query Panel */}
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }}>
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+            <h2 className="text-2xl font-bold mb-4 text-white">2. Ask a Question</h2>
+            <form onSubmit={handleQuery} className="flex flex-col space-y-4">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Type your question here..."
+                className="w-full p-4 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={loadingQuery || !query}
+                className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+              >
+                {loadingQuery ? (
+                  <>
+                    <SpinnerIcon />
+                    <span>Searching...</span>
+                  </>
+                ) : (
+                  <>
+                    <QueryIcon />
+                    <span>Search</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </motion.div>
+
+        {/* Answer Panel */}
+        <AnimatePresence>
+          {answer && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700"
+            >
+              <h2 className="text-2xl font-bold mb-4 text-white">Answer</h2>
+              <div
+                className="text-gray-300 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: answer }}
+              />
+
+              {sources && sources.length > 0 && (
+                <div className="mt-6 border-t border-gray-700 pt-4">
+                  <h3 className="text-lg font-bold text-gray-400 mb-2">Sources</h3>
+                  <ul className="list-disc list-inside text-sm text-gray-400 space-y-1">
+                    {sources.map((source, index) => (
+                      <li key={index}>
+                        <a href={source} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-400">{source}</a>
+                        <sup>[{index + 1}]</sup>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Metrics Panel */}
+        <AnimatePresence>
+          {(responseTime || tokenEstimate) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="text-center text-sm text-gray-400 mt-8"
+            >
+              <p>Response Time: {responseTime}ms</p>
+              {tokenEstimate && <p>Estimated Tokens: {tokenEstimate}</p>}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+7.) .gitignore
+
+Environment variables file
+.env
+
+Next.js build output
+.next/
+
+Node.js dependencies
+node_modules/
+
+Python virtual environment
+venv/ pycache/
+
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local
+
+
+8.) requirements.txt
+
+fastapi
+uvicorn
+python-dotenv
+langchain
+langchain-core
+langchain-community
+langchain-google-genai
+langchain-pinecone
+tiktoken
+pinecone-client
+cohere
+python-multipart
+pypdf
