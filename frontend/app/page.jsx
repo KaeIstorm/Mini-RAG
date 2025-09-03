@@ -108,16 +108,14 @@ export default function HomePage() {
       const data = await response.json();
       const endTime = performance.now();
 
-      // Check for a 'no-answer' case.
       if (data.answer.toLowerCase().includes("i don't know")) {
         setAnswer("I'm sorry, I couldn't find an answer to that question in the provided documents.");
         setSources(null);
       } else {
         // Parse citations from the answer string
-        const citationRegex = /\[Source ID: (\d+)]/g;
-        const formattedAnswer = data.answer.replace(citationRegex, (match, id) => {
-          // You can create a hyperlink or a tooltip here for a better UI
-          return `<sup>[${id}]</sup>`;
+        const citationRegex = /\[Page (\d+)]/g; // CHANGE THIS LINE
+        const formattedAnswer = data.answer.replace(citationRegex, (match, page) => {
+          return `<sup>[p.${page}]</sup>`;
         });
         setAnswer(formattedAnswer);
         setSources(data.sources); // Assumes backend returns sources in a 'sources' key
