@@ -24,9 +24,43 @@ The data flow is a two-phase process: ingestion and querying. During ingestion, 
 
 -----
 
-### **3. Technical Components**
+### **3. RAG Pipeline Details**
 
-#### **3.1 Backend Components**
+#### **3.1 Architecture Diagram**
+
+The following diagram illustrates the high-level architecture and data flow of the Mini RAG system:
+
+#### **3.2 Providers and Models**
+
+| Component             | Provider/Library           | Model/Service Used                  |
+| --------------------- | -------------------------- | ----------------------------------- |
+| **Embeddings** | Google Generative AI       | `models/embedding-001`              |
+| **LLM** | Google Generative AI       | `gemini-2.5-pro`                    |
+| **Vector Store** | Pinecone                   | Managed Vector Database             |
+| **Re-ranking** | Cohere                     | `rerank-english-v3.0`               |
+
+#### **3.3 Chunking Parameters**
+
+The document chunking process is configured with the following parameters to balance chunk size and context preservation:
+
+  - **Chunk Size**: `1000` tokens
+  - **Chunk Overlap**: `200` tokens
+  - **Separator Priority**: `["\n\n", "\n", " ", ""]`
+
+This configuration ensures that each chunk is large enough to contain meaningful context while the overlap helps maintain continuity across chunks, preventing critical information from being split.
+
+#### **3.4 Retriever and Re-ranker Settings**
+
+The retrieval process is optimized for both relevance and diversity:
+
+  - **Base Retriever**: Uses **Maximal Marginal Relevance (MMR)** to fetch an initial set of diverse, relevant documents. It is configured with `search_kwargs={"fetch_k": 50, "k": 10}`. This means it retrieves the **top 50** most similar documents from the vector store and then selects the **top 10** among them that are most diverse.
+  - **Contextual Re-ranker**: The `CohereRerank` model is then applied to the top 10 documents to re-rank them based on their semantic relevance to the query. The final context provided to the LLM consists of the `top_n=3` most relevant documents after re-ranking.
+
+-----
+
+### **4. Technical Components**
+
+#### **4.1 Backend Components**
 
   * `Config.py`: A centralized configuration file for managing all environment variables, including API keys for Google, Pinecone, and Cohere.
   * `utilities.py`: Contains helper functions for token counting, unique document ID generation, and document formatting for LLM context.
@@ -34,21 +68,21 @@ The data flow is a two-phase process: ingestion and querying. During ingestion, 
   * `rag.py`: The core of the RAG pipeline. It initializes a **Maximal Marginal Relevance (MMR)** retriever with a **Cohere Re-ranker** to improve document relevance. The RAG chain is constructed using LangChain's expression language, concurrently handling answer generation and source extraction for citations.
   * `app.py`: The FastAPI application server. It exposes `/ingest` and `/query` endpoints for file processing and question answering. It also pre-initializes the RAG chain upon startup to minimize latency for subsequent queries.
 
-#### **3.2 Frontend Components**
+#### **4.2 Frontend Components**
 
   * `HomePage.js`: The primary React component that manages application state, handles API interactions with the backend, and dynamically renders the user interface. It is configured to send requests to the live backend URL hosted on Render.
 
 -----
 
-### **4. Deployment and Setup**
+### **5. Deployment and Setup**
 
-#### **4.1 Prerequisites**
+#### **5.1 Prerequisites**
 
   - Python 3.8+
   - Node.js and npm
   - API keys for Google, Pinecone, and Cohere.
 
-#### **4.2 Local Setup**
+#### **5.2 Local Setup**
 
 **Backend:**
 
@@ -99,13 +133,13 @@ The data flow is a two-phase process: ingestion and querying. During ingestion, 
     ```
     The frontend will be available at `http://localhost:3000`.
 
-#### **4.3 Deployment**
+#### **5.3 Deployment**
 
 For deployment to a live environment, the project is configured for Vercel (frontend) and Render (backend). The API keys should be set as environment variables on the respective hosting platforms.
 
 -----
 
-### **5. Usage Instructions**
+### **6. Usage Instructions**
 
 1.  **Ingestion:** Use the provided interface to either paste text or upload a `.txt` or `.pdf` file. This action triggers the `/ingest` endpoint on the backend, updating the Pinecone index.
 2.  **Querying:** Enter a question into the text field in the "Ask a Question" section and submit the query.
@@ -113,7 +147,7 @@ For deployment to a live environment, the project is configured for Vercel (fron
 
 -----
 
-### **6. Limitations and Future Work**
+### **7. Limitations and Future Work**
 
   - **File Support**: Current support is limited to `.txt` and `.pdf` files. Future work could extend this to include `.docx`, `.md`, and other common document formats.
   - **Conversation History**: The application is stateless and does not maintain conversation history. Implementing a session-based chat history would improve the user experience by allowing for follow-up questions and more coherent conversations.
