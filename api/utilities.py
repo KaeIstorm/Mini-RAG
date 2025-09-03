@@ -15,4 +15,17 @@ def getDocID(doc: Document) -> str:
     return f"{content_hash}-{metadata_hash}"
 
 def formatDocsWithIDs(docs):
-    return "\n\n".join([f"Source ID: {i+1}\nContent: {doc.page_content}" for i, doc in enumerate(docs)])
+    """
+    Formats documents for the LLM. For PDFs, it includes a page number citation.
+    For other documents, it includes the content without a citation.
+    """
+    formatted_output = []
+    for i, doc in enumerate(docs):
+        # Check if the document has a 'page' key in its metadata, indicating it's a PDF chunk
+        if "page" in doc.metadata:
+            formatted_output.append(f"Source: Page {doc.metadata['page']}\nContent: {doc.page_content}")
+        else:
+            # For other document types, just provide the content without a source ID
+            formatted_output.append(f"Content: {doc.page_content}")
+            
+    return "\n\n".join(formatted_output)

@@ -42,12 +42,13 @@ def getRetriever():
 def ragChain(finalRetriever):
     """Put together the final RAG chain"""
 
-    template="""
+    template = """
         You are a helpful assistant for question-answering tasks.
         Use the following pieces of retrieved context to answer the question.
         If you don't know the answer, just say that you don't know, and be graceful about it.
         Generate a concise answer and provide inline citations from the documents.
-        The citations should be formatted as [Source ID].
+        The citations should be formatted as [Page X] for PDF sources.
+        If a source has no page number, do not provide a citation for that piece of information.
 
         Context:
         {context}
@@ -57,10 +58,10 @@ def ragChain(finalRetriever):
         Answer:"""
 
     prompt = ChatPromptTemplate.from_template(template)
-    llm=ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.2)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.2)
     print("LLM Initialized")
 
-    rag=(
+    rag = (
         {"context": finalRetriever | RunnableLambda(formatDocsWithIDs), "question": RunnablePassthrough()}
         | prompt
         | llm
