@@ -145,18 +145,23 @@ The `sampletext.txt` file includes information and code about the RAG's own func
 This Golden set includes the following questions, and expected answers:
 
 1.  **Question:** What are the chunk size and chunk overlap settings used in the document processing pipeline?
+   
     **Correct Answer:** The document chunking process uses a chunk size of `1000` tokens and a chunk overlap of `200` tokens.
 
-2.  **Question:** Which companies provide the services for the LLM and the vector store in this project?
+3.  **Question:** Which companies provide the services for the LLM and the vector store in this project?
+
     **Correct Answer:** The LLM is provided by Google Generative AI [cite: 22][cite_start], and the vector store is a managed database provided by Pinecone.
 
-4.  **Question:** What is the primary function of the `getRetriever()` function in `rag.py`?
+5.  **Question:** What is the primary function of the `getRetriever()` function in `rag.py`?
+
     **Correct Answer:** The `getRetriever()` function creates a retriever that uses Maximal Marginal Relevance (MMR) for initial retrieval and a Cohere Re-ranker to refine the results.
 
-5.  **Question:** What is the `app.py` file responsible for, and what is its role in handling API endpoints?
+7.  **Question:** What is the `app.py` file responsible for, and what is its role in handling API endpoints?
+
     **Correct Answer:** The `app.py` file is the FastAPI application server[cite: 39]. [cite_start]It is responsible for exposing API endpoints for both file ingestion (`/ingest`) and question answering (`/query`).
 
-6.  **Question:** Which platforms are used to host the frontend and backend of the Mini RAG application for live deployment?
+9.  **Question:** Which platforms are used to host the frontend and backend of the Mini RAG application for live deployment?
+
     **Correct Answer:** The frontend is hosted on Vercel, and the backend is hosted on Render.
 
 The RAG gives the following actual answers to the above questions:
@@ -167,13 +172,13 @@ The RAG gives the following actual answers to the above questions:
 
 3. The primary function of the `getRetriever()` function in `rag.py` is to create a sophisticated retriever for finding relevant documents. It does this by connecting to a Pinecone vector store, creating a base retriever that uses Maximal Marginal Relevance (MMR) search, and then combining it with a Cohere Rerank compressor to improve the final results.
 
-4.
+4. Based on the provided documents, the `app.py` file is the FastAPI application server, which serves as the backend for the application. Its primary role is to expose and handle API endpoints for two main functions: * **/ingest**: This endpoint is responsible for file processing. It receives new documents (like `.txt` or `.pdf` files), chunks them, and upserts them into the Pinecone vector store. * **/query**: This endpoint handles question answering. It takes a user's question, passes it to the RAG (Retrieval-Augmented Generation) pipeline, and returns the generated answer. Additionally, `app.py` pre-initializes the RAG chain when the server starts up to minimize latency for subsequent user queries.
 
-5.
+5. Based on the provided documents, the Mini RAG application's frontend is hosted on Vercel, and the backend is hosted on Render for live deployment.
 
 The RAG manages to answer all the questions correctly in sufficient enough detail, giving it a 100% success rate at understanding context and giving precise response to it.
 
-### **6. Usage Instructions**
+### **7. Usage Instructions**
 
 1.  **Ingestion:** Use the provided interface to either paste text or upload a `.txt` or `.pdf` file. This action triggers the `/ingest` endpoint on the backend, updating the Pinecone index.
 2.  **Querying:** Enter a question into the text field in the "Ask a Question" section and submit the query.
@@ -181,7 +186,7 @@ The RAG manages to answer all the questions correctly in sufficient enough detai
 
 -----
 
-### **7. Limitations and Future Work**
+### **8. Limitations and Future Work**
 
   - **File Support**: Current support is limited to `.txt` and `.pdf` files. Future work could extend this to include `.docx`, `.md`, and other common document formats.
   - **Conversation History**: The application is stateless and does not maintain conversation history. Implementing a session-based chat history would improve the user experience by allowing for follow-up questions and more coherent conversations.
