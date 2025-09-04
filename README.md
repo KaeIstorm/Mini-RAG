@@ -145,31 +145,31 @@ The `sampletext.txt` file includes information and code about the RAG's own func
 This Golden set includes the following questions, and expected answers:
 
 1.  **Question:** What are the chunk size and chunk overlap settings used in the document processing pipeline?
-    [cite_start]**Correct Answer:** The document chunking process uses a chunk size of `1000` tokens and a chunk overlap of `200` tokens.
+    **Correct Answer:** The document chunking process uses a chunk size of `1000` tokens and a chunk overlap of `200` tokens.
 
 2.  **Question:** Which companies provide the services for the LLM and the vector store in this project?
-    [cite_start]**Correct Answer:** The LLM is provided by Google Generative AI [cite: 22][cite_start], and the vector store is a managed database provided by Pinecone.
+    **Correct Answer:** The LLM is provided by Google Generative AI [cite: 22][cite_start], and the vector store is a managed database provided by Pinecone.
 
-3.  **Question:** What is the primary function of the `getRetriever()` function in `rag.py`?
-    [cite_start]**Correct Answer:** The `getRetriever()` function creates a retriever that uses Maximal Marginal Relevance (MMR) for initial retrieval and a Cohere Re-ranker to refine the results.
+4.  **Question:** What is the primary function of the `getRetriever()` function in `rag.py`?
+    **Correct Answer:** The `getRetriever()` function creates a retriever that uses Maximal Marginal Relevance (MMR) for initial retrieval and a Cohere Re-ranker to refine the results.
 
-4.  **Question:** What is the `app.py` file responsible for, and what is its role in handling API endpoints?
-    [cite_start]**Correct Answer:** The `app.py` file is the FastAPI application server[cite: 39]. [cite_start]It is responsible for exposing API endpoints for both file ingestion (`/ingest`) and question answering (`/query`).
+5.  **Question:** What is the `app.py` file responsible for, and what is its role in handling API endpoints?
+    **Correct Answer:** The `app.py` file is the FastAPI application server[cite: 39]. [cite_start]It is responsible for exposing API endpoints for both file ingestion (`/ingest`) and question answering (`/query`).
 
-5.  **Question:** Which platforms are used to host the frontend and backend of the Mini RAG application for live deployment?
-    [cite_start]**Correct Answer:** The frontend is hosted on Vercel, and the backend is hosted on Render.
+6.  **Question:** Which platforms are used to host the frontend and backend of the Mini RAG application for live deployment?
+    **Correct Answer:** The frontend is hosted on Vercel, and the backend is hosted on Render.
 
 The RAG gives the following actual answers to the above questions:
 
-**Answer 1:** Based on the provided documentation, the chunking parameters are set as follows: * **Chunk Size**: `1000` tokens * **Chunk Overlap**: `200` tokens
+1. Based on the provided documentation, the chunking parameters are set as follows: * **Chunk Size**: `1000` tokens * **Chunk Overlap**: `200` tokens
 
-**Answer 2:** Based on the project documentation, Google Generative AI provides the LLM service, and Pinecone provides the vector store.
+2. Based on the project documentation, Google Generative AI provides the LLM service, and Pinecone provides the vector store.
 
-**Answer 3** The primary function of the `getRetriever()` function in `rag.py` is to create a sophisticated retriever for finding relevant documents. It does this by connecting to a Pinecone vector store, creating a base retriever that uses Maximal Marginal Relevance (MMR) search, and then combining it with a Cohere Rerank compressor to improve the final results.
+3. The primary function of the `getRetriever()` function in `rag.py` is to create a sophisticated retriever for finding relevant documents. It does this by connecting to a Pinecone vector store, creating a base retriever that uses Maximal Marginal Relevance (MMR) search, and then combining it with a Cohere Rerank compressor to improve the final results.
 
-**Answer 4**
+4.
 
-**Answer 5**
+5.
 
 The RAG manages to answer all the questions correctly in sufficient enough detail, giving it a 100% success rate at understanding context and giving precise response to it.
 
