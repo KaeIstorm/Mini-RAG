@@ -1,8 +1,10 @@
 #import libraries
+import io
 import os
+import tempfile
 from pinecone import Pinecone
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_community.document_loaders import TextLoader, PyPDFLoader
+from langchain_pinecone import PineconeEmbeddings
+from langchain_community.document_loaders import UnstructuredFileLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 #import modules
@@ -10,27 +12,33 @@ from api.config import Config
 from api.utilities import getDocID, tokenCount
 
 #loading and chunking the document
-def loadAndChunk(path:str):
+def loadAndChunk(content: bytes, name: str):
     """Loads the provided text and chunks it."""
     
-    if path.endswith(".pdf"):
-        loader = PyPDFLoader(path)
-    else:
-        loader = TextLoader(path)
-        
-    #document loading
-    documents=loader.load()
-    print("Documents loaded successfully!")
+    with tempfile.NamedTemporaryFile(suffix=f"_{name}", delete=False) as temp_file:
+        temp_file.write(content)
+        temp_file_path = temp_file.name
 
-    #document chunking
-    splitter=RecursiveCharacterTextSplitter(
-        chunk_size=1000, 
-        chunk_overlap=200, 
-        length_function=tokenCount,
-        separators=["\n\n", "\n", " ", ""]
-    )
-    print("Documents chunked successfully!")
-    
+    try:
+        loader = UnstructuredFileLoader(file_path=temp_file_path)
+            
+        print("Documents loaded successfully!")
+
+        # document chunking
+        splitter=RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=200, 
+            length_function=tokenCount,
+            separators=["\n\n", "\n", " ", ""]
+        )
+        print("Documents chunked successfully!")
+            
+        documents = loader.load()
+            
+    finally:
+        # Ensure the temporary file is always deleted
+        os.remove(temp_file_path)
+
     return splitter.split_documents(documents)
 
 #create vector embedings and store them in a vector DB
@@ -39,7 +47,7 @@ def vectorUpsert(chunks: list):
     from langchain_pinecone import PineconeVectorStore
 
     #vector embeddings
-    embeddings=GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings=PineconeEmbeddings(model="multilingual-e5-large")
     print("Documnents embedded successfully")
 
     #preparing docs for upserting

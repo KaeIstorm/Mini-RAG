@@ -1,5 +1,6 @@
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_pinecone import PineconeEmbeddings
 from langchain_cohere import CohereRerank
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,7 +14,7 @@ from api.utilities import formatDocsWithIDs
 def getRetriever():
     """Creates a Retriever composed of MMR Retrieval and Cohere Reranking"""
     
-    embeddings=GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = PineconeEmbeddings(model="multilingual-e5-large")
     vectorStore = PineconeVectorStore.from_existing_index(
         index_name=Config.PINECONE_INDEX_NAME,
         embedding=embeddings

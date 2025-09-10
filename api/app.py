@@ -55,20 +55,16 @@ async def ingest_document(file: UploadFile = File(...)):
     Ingests a new document file (e.g., PDF, TXT), chunks it, and upserts to the vector store.
     """
     try:
-        # Save the uploaded file temporarily
-        file_path = f"/tmp/{file.filename}"
-        with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
+
+        contents = await file.read()
 
         # Now call your updated load and chunk function
-        chunks = loadAndChunk(file_path)
+        chunks = loadAndChunk(contents, file.filename)
         vectorUpsert(chunks)
-
-        # Remove the temporary file
-        os.remove(file_path)
 
         return {"message": f"Document '{file.filename}' ingested successfully."}
     except Exception as e:
+        print(f"Failed to ingest document: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to ingest document: {e}")
 
 
