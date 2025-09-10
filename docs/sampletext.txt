@@ -1,7 +1,3 @@
-The Mini-RAG application is a small, simple RAG developed over 24 hours for the PreDusk technologies Hiring Assessment.
-
-Here is some key information about it:
-
 ### **Project Documentation: Mini RAG Application**
 
 This document provides a comprehensive, formal, and technical overview of the Mini RAG application, detailing its architecture, components, setup, and usage.
@@ -18,11 +14,11 @@ The Mini RAG application is a full-stack, end-to-end system designed for real-ti
 
 The application operates on a client-server model, utilizing a three-tiered architecture.
 
-  - **Tier 1: Frontend (Next.js)**: The user interface is developed with Next.js, and is hosted on **Vercel**. It is responsible for user interactions, including document uploads and question submissions, and for displaying the final answers and citations.
+  * **Tier 1: Frontend (Next.js)**: The user interface is developed with Next.js, and is hosted on **Vercel**. It is responsible for user interactions, including document uploads and question submissions, and for displaying the final answers and citations.
 
-  - **Tier 2: Backend (FastAPI)**: The API layer is built with FastAPI and is hosted on **Render**. It orchestrates the entire RAG pipeline, handling data ingestion, retrieval, and LLM-based generation.
+  * **Tier 2: Backend (FastAPI)**: The API layer is built with FastAPI and is hosted on **Render**. It orchestrates the entire RAG pipeline, handling data ingestion, retrieval, and LLM-based generation.
 
-  - **Tier 3: Vector Database (Pinecone)**: An external vector store that serves as the system's knowledge base. It stores vector embeddings of document chunks, enabling efficient semantic search operations.
+  * **Tier 3: Vector Database (Pinecone)**: An external vector store that serves as the system's knowledge base. It stores vector embeddings of document chunks, enabling efficient semantic search operations.
 
 The data flow is a two-phase process: ingestion and querying. During ingestion, documents are processed, chunked, and vectorized before being stored in Pinecone. During querying, the system retrieves relevant document chunks from Pinecone, uses them as context for a large language model, and returns a final, cited answer.
 
@@ -36,20 +32,20 @@ The following diagram illustrates the high-level architecture and data flow of t
 
 #### **3.2 Providers and Models**
 
-| Component             | Provider/Library           | Model/Service Used                  |
-| --------------------- | -------------------------- | ----------------------------------- |
-| **Embeddings** | Google Generative AI       | `models/embedding-001`              |
-| **LLM** | Google Generative AI       | `gemini-2.5-pro`                    |
-| **Vector Store** | Pinecone                   | Managed Vector Database             |
-| **Re-ranking** | Cohere                     | `rerank-english-v3.0`               |
+| Component | Provider/Library | Model/Service Used |
+| :--- | :--- | :--- |
+| **Embeddings** | Pinecone | `multilingual-e5-large` |
+| **LLM** | Google Generative AI | `gemini-2.5-pro` |
+| **Vector Store** | Pinecone | Managed Vector Database |
+| **Re-ranking** | Cohere | `rerank-english-v3.0` |
 
 #### **3.3 Chunking Parameters**
 
 The document chunking process is configured with the following parameters to balance chunk size and context preservation:
 
-  - **Chunk Size**: `1000` tokens
-  - **Chunk Overlap**: `200` tokens
-  - **Separator Priority**: `["\n\n", "\n", " ", ""]`
+  * **Chunk Size**: 1000 tokens
+  * **Chunk Overlap**: 200 tokens
+  * **Separator Priority**: `["\n\n", "\n", " ", ""]`
 
 This configuration ensures that each chunk is large enough to contain meaningful context while the overlap helps maintain continuity across chunks, preventing critical information from being split.
 
@@ -57,8 +53,8 @@ This configuration ensures that each chunk is large enough to contain meaningful
 
 The retrieval process is optimized for both relevance and diversity:
 
-  - **Base Retriever**: Uses **Maximal Marginal Relevance (MMR)** to fetch an initial set of diverse, relevant documents. It is configured with `search_kwargs={"fetch_k": 50, "k": 10}`. This means it retrieves the **top 50** most similar documents from the vector store and then selects the **top 10** among them that are most diverse.
-  - **Contextual Re-ranker**: The `CohereRerank` model is then applied to the top 10 documents to re-rank them based on their semantic relevance to the query. The final context provided to the LLM consists of the `top_n=3` most relevant documents after re-ranking.
+  * **Base Retriever**: Uses **Maximal Marginal Relevance (MMR)** to fetch an initial set of diverse, relevant documents. It is configured with `search_kwargs={"fetch_k": 50, "k": 10}`. This means it retrieves the **top 50** most similar documents from the vector store and then selects the **top 10** among them that are most diverse.
+  * **Contextual Re-ranker**: The `CohereRerank` model is then applied to the top 10 documents to re-rank them based on their semantic relevance to the query. The final context provided to the LLM consists of the `top_n=3` most relevant documents after re-ranking.
 
 -----
 
@@ -66,10 +62,10 @@ The retrieval process is optimized for both relevance and diversity:
 
 #### **4.1 Backend Components**
 
-  * `Config.py`: A centralized configuration file for managing all environment variables, including API keys for Google, Pinecone, and Cohere.
+  * `Config.py`: A centralized configuration file for managing all environment variables, including API keys for Pinecone and Cohere.
   * `utilities.py`: Contains helper functions for token counting, unique document ID generation, and document formatting for LLM context.
-  * `indexing.py`: A dedicated script for the document ingestion and indexing process. It loads documents, splits them into chunks using a `RecursiveCharacterTextSplitter`, and upserts the corresponding vector embeddings into the Pinecone index.
-  * `rag.py`: The core of the RAG pipeline. It initializes a **Maximal Marginal Relevance (MMR)** retriever with a **Cohere Re-ranker** to improve document relevance. The RAG chain is constructed using LangChain's expression language, concurrently handling answer generation and source extraction for citations.
+  * `indexing.py`: A dedicated script for the document ingestion and indexing process. **It now uses the `Unstructured` library to handle a wide range of file types beyond just text and PDFs.** It creates a temporary file on the server before processing, ensuring compatibility with hosted environments like Render. It loads documents, splits them into chunks using a `RecursiveCharacterTextSplitter`, and upserts the corresponding vector embeddings into the Pinecone index using Pinecone's integrated embedding service.
+  * `rag.py`: The core of the RAG pipeline. **It has been updated to use Pinecone's integrated embedding model (`multilingual-e5-large`) for both ingestion and querying, which resolves API quota issues.** It initializes a **Maximal Marginal Relevance (MMR)** retriever with a **Cohere Re-ranker** to improve document relevance. The RAG chain is constructed using LangChain's expression language.
   * `app.py`: The FastAPI application server. It exposes `/ingest` and `/query` endpoints for file processing and question answering. It also pre-initializes the RAG chain upon startup to minimize latency for subsequent queries.
 
 #### **4.2 Frontend Components**
@@ -82,9 +78,10 @@ The retrieval process is optimized for both relevance and diversity:
 
 #### **5.1 Prerequisites**
 
-  - Python 3.8+
-  - Node.js and npm
-  - API keys for Google, Pinecone, and Cohere.
+  * Python 3.8+
+  * Node.js and npm
+  * API keys for Google, Pinecone, and Cohere.
+  * **Ensure that your Pinecone index is configured with a dimension of 1024 to match the `multilingual-e5-large` embedding model.**
 
 #### **5.2 Local Setup**
 
@@ -101,7 +98,7 @@ The retrieval process is optimized for both relevance and diversity:
     pip install -r requirements.txt
     ```
 4.  Create a `.env` file and add your API keys.
-    ```
+    ```dotenv
     GOOGLE_API_KEY="your_google_api_key_here"
     PINECONE_API_KEY="your_pinecone_api_key_here"
     PINECONE_INDEX_NAME="your-pinecone-index-name"
@@ -128,7 +125,7 @@ The retrieval process is optimized for both relevance and diversity:
     npm install
     ```
 3.  Create a `.env.local` file and set the backend API URL to the local address.
-    ```
+    ```dotenv
     NEXT_PUBLIC_API_URL="http://localhost:8000"
     ```
 4.  Start the Next.js development server.
@@ -145,7 +142,7 @@ For deployment to a live environment, the project is configured for Vercel (fron
 
 ### **6. Usage Instructions**
 
-1.  **Ingestion:** Use the provided interface to either paste text or upload a `.txt` or `.pdf` file. This action triggers the `/ingest` endpoint on the backend, updating the Pinecone index.
+1.  **Ingestion:** Use the provided interface to either paste text or upload a document. **The system now supports a wide range of file types, including DOCX, PPTX, and more, thanks to the `Unstructured` library.** This action triggers the `/ingest` endpoint on the backend, updating the Pinecone index.
 2.  **Querying:** Enter a question into the text field in the "Ask a Question" section and submit the query.
 3.  **Output:** The front-end will display the generated answer and a list of sources, such as page numbers, formatted as citations.
 
@@ -153,9 +150,9 @@ For deployment to a live environment, the project is configured for Vercel (fron
 
 ### **7. Limitations and Future Work**
 
-  - **File Support**: Current support is limited to `.txt` and `.pdf` files. Future work could extend this to include `.docx`, `.md`, and other common document formats.
-  - **Conversation History**: The application is stateless and does not maintain conversation history. Implementing a session-based chat history would improve the user experience by allowing for follow-up questions and more coherent conversations.
-  - **Evaluation**: The current evaluation is a manual, "gold set" based approach. Future work could include the implementation of an automated evaluation framework to systematically measure the RAG pipeline's performance.
+  * **File Support**: The application now supports a wide variety of file types.
+  * **Conversation History**: The application is stateless and does not maintain conversation history. Implementing a session-based chat history would improve the user experience by allowing for follow-up questions and more coherent conversations.
+  * **Evaluation**: The current evaluation is a manual, "gold set" based approach. Future work could include the implementation of an automated evaluation framework to systematically measure the RAG pipeline's performance.
 
 -----
 
@@ -255,20 +252,16 @@ async def ingest_document(file: UploadFile = File(...)):
     Ingests a new document file (e.g., PDF, TXT), chunks it, and upserts to the vector store.
     """
     try:
-        # Save the uploaded file temporarily
-        file_path = f"/tmp/{file.filename}"
-        with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
+
+        contents = await file.read()
 
         # Now call your updated load and chunk function
-        chunks = loadAndChunk(file_path)
+        chunks = loadAndChunk(contents, file.filename)
         vectorUpsert(chunks)
-
-        # Remove the temporary file
-        os.remove(file_path)
 
         return {"message": f"Document '{file.filename}' ingested successfully."}
     except Exception as e:
+        print(f"Failed to ingest document: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to ingest document: {e}")
 
 
@@ -323,10 +316,12 @@ class Config:
 3.) indexing.py
 
 #import libraries
+import io
 import os
+import tempfile
 from pinecone import Pinecone
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain.document_loaders import TextLoader, PyPDFLoader
+from langchain_pinecone import PineconeEmbeddings
+from langchain_community.document_loaders import UnstructuredFileLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 #import modules
@@ -334,27 +329,33 @@ from api.config import Config
 from api.utilities import getDocID, tokenCount
 
 #loading and chunking the document
-def loadAndChunk(path:str):
+def loadAndChunk(content: bytes, name: str):
     """Loads the provided text and chunks it."""
     
-    if path.endswith(".pdf"):
-        loader = PyPDFLoader(path)
-    else:
-        loader = TextLoader(path)
-        
-    #document loading
-    documents=loader.load()
-    print("Documents loaded successfully!")
+    with tempfile.NamedTemporaryFile(suffix=f"_{name}", delete=False) as temp_file:
+        temp_file.write(content)
+        temp_file_path = temp_file.name
 
-    #document chunking
-    splitter=RecursiveCharacterTextSplitter(
-        chunk_size=1000, 
-        chunk_overlap=200, 
-        length_function=tokenCount,
-        separators=["\n\n", "\n", " ", ""]
-    )
-    print("Documents chunked successfully!")
-    
+    try:
+        loader = UnstructuredFileLoader(file_path=temp_file_path)
+            
+        print("Documents loaded successfully!")
+
+        # document chunking
+        splitter=RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=200, 
+            length_function=tokenCount,
+            separators=["\n\n", "\n", " ", ""]
+        )
+        print("Documents chunked successfully!")
+            
+        documents = loader.load()
+            
+    finally:
+        # Ensure the temporary file is always deleted
+        os.remove(temp_file_path)
+
     return splitter.split_documents(documents)
 
 #create vector embedings and store them in a vector DB
@@ -363,7 +364,7 @@ def vectorUpsert(chunks: list):
     from langchain_pinecone import PineconeVectorStore
 
     #vector embeddings
-    embeddings=GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings=PineconeEmbeddings(model="multilingual-e5-large")
     print("Documnents embedded successfully")
 
     #preparing docs for upserting
@@ -403,8 +404,9 @@ if __name__=="__main__":
 4.) rag.py
 
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain.retrievers.document_compressors import CohereRerank
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_pinecone import PineconeEmbeddings
+from langchain_cohere import CohereRerank
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
@@ -417,7 +419,7 @@ from api.utilities import formatDocsWithIDs
 def getRetriever():
     """Creates a Retriever composed of MMR Retrieval and Cohere Reranking"""
     
-    embeddings=GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = PineconeEmbeddings(model="multilingual-e5-large")
     vectorStore = PineconeVectorStore.from_existing_index(
         index_name=Config.PINECONE_INDEX_NAME,
         embedding=embeddings
@@ -831,3 +833,8 @@ pinecone-client
 cohere
 python-multipart
 pypdf
+langchain_cohere
+unstructured
+python-magic
+langchain-unstructured
+fastavro
