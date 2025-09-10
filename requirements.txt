@@ -12,3 +12,7 @@ cohere
 python-multipart
 pypdf
 langchain_cohere
+unstructured
+python-magic
+langchain-unstructured
+fastavro
