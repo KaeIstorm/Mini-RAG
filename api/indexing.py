@@ -2,7 +2,7 @@
 import os
 from pinecone import Pinecone
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain.document_loaders import TextLoader, PyPDFLoader
+from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 #import modules
